@@ -1,0 +1,6 @@
+{% extends "index.html" %}
+{% block content %}
+{% for item in users %}
+    <p><img src="{{ item.photo_50 }}" alt="{{ item.first_name }} {{ item.last_name }}" width="35" class="img-circle">   <a href="https://vk.com/id{{ item.id }}">{{ item.first_name }} {{ item.last_name }}</a>   {{ item.likes }}</p>
+{% endfor %}
+{% endblock %}
