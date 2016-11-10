@@ -8,11 +8,11 @@ from django import forms
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from django.template import loader
 
 # Настройки
-VK_CLIENT_ID = ''
-VK_CLIENT_SECRET = ''
+from django.template import loader
+
+from wemin import settings
 
 # Форма
 class FormLike(forms.Form):
@@ -32,13 +32,12 @@ class FormLike(forms.Form):
 
 # Функции
 def authorize(request):
-  'Авторизация вконтакте'
     code = request.GET.get('code')
     redirect_url = __get_redirect_url(request)
 
     response = (requests.get(
         'https://oauth.vk.com/access_token?client_id=%s&client_secret=%s&redirect_uri=%s&code=%s'
-        % (VK_CLIENT_ID, VK_CLIENT_SECRET, redirect_url, code))).json()
+        % (settings.VK_CLIENT_ID, settings.VK_CLIENT_SECRET, redirect_url, code))).json()
     
     request.session['access_token'] = response['access_token']
 
@@ -52,7 +51,6 @@ def __get_redirect_url(request):
 
 
 def index(request):
-
     redirect_url = __get_redirect_url(request)
 
     t = loader.get_template('buttons.html')
@@ -61,7 +59,6 @@ def index(request):
 
 
 def uri_manager(request):
-  'Обработка введеных пользвателем ссылки'
     if request.method == 'POST':
         form = FormLike(request.POST)
         if re.findall('id', request.POST.get('uri')) == ['id']:  # если ссылка с id пользователя
@@ -80,7 +77,7 @@ def uri_manager(request):
             wall_get = (requests.post(
                 'https://api.vk.com/method/wall.get?access_token=%s&owner_id=%s&filter=all&v=5.59' % (
                     request.session['access_token'], owner_id))).json()
-            __dubbing(request, wall_get, owner_id)
+            users = __dubbing(request, wall_get, owner_id)
 
             return render(request, 'result.html', {'users': users})
 
@@ -95,7 +92,7 @@ def uri_manager(request):
             wall_get = (requests.post(
                 'https://api.vk.com/method/wall.get?access_token=%s&owner_id=%s&filter=all&v=5.59' % (
                     request.session['access_token'], owner_id))).json()
-            __dubbing(request, wall_get, owner_id)
+            users = __dubbing(request, wall_get, owner_id)
 
             return render(request, 'result.html', {'users': users})
     else:
@@ -107,7 +104,6 @@ def __dubbing(request, wall_get, owner_id):
     # дата в unix формате
     date = int(
         time.mktime(datetime.strptime(request.POST.get('data'), '%d-%m-%Y').timetuple()))
-    
     # выборка id записей стены начиная с выбранной даты
     i = 0
     wall = []
@@ -128,11 +124,9 @@ def __dubbing(request, wall_get, owner_id):
                     result[like['id']] = 0
 
                 result[like['id']] += 1
-                
-    # получение информации о пользователях
+
     users = []
     for user_id, likes in result.items():
-      time.sleep(0.5)
         user_info = (requests.post(
             'https://api.vk.com/method/users.get?access_token=%s&user_ids=%s&fields=photo_50&v=5.59' % (request.session['access_token'], user_id))).json()
 
